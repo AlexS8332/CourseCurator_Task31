@@ -278,3 +278,11 @@ func rootDir(r *course.Root) string {
 	}
 	return r.Dir
 }
+
+// docs_search для MCP-сервера course — тот же поиск с цитатами, что у
+// агента /help (без наблюдателя выдачи: у сервера нет хода).
+func init() {
+	DocsSearchTool = func(s *kb.Searcher, index string) tools.Tool {
+		return cite.SearchTool(s, index, help.DocsK, nil)
+	}
+}

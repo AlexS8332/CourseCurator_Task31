@@ -207,7 +207,11 @@ func scenario(req llm.Request) (llm.Response, error) {
 	}
 	h, ok := firstHit(req)
 	if !ok {
-		// Без базы: ответ по памяти, без ключевых слов набора.
+		// Без базы модель сначала зовёт какой-нибудь инструмент (лишний шаг — так ведёт себя
+		// и настоящая), потом отвечает по памяти, без ключевых слов набора.
+		if llmtest.HasTool(req, "git_branch") && !called(req, "git_branch") {
+			return llmtest.ToolCall("git_branch", `{"repo":"root"}`), nil
+		}
 		return finish(help.Answer{Cited: cite.Cited{Status: "answered", Answer: "Точно не помню, это описано в карточках."}}), nil
 	}
 	quote := string([]rune(h.Text)[:min(60, len([]rune(h.Text)))])

@@ -323,10 +323,19 @@ func t14Docs(ctx context.Context, o T14Options, reg *features.Registry, all []kb
 	avg := float64(mr.steps) / float64(max(m.n, 1))
 	r.check("запросов на ход (среднее)", "main", avg <= MaxStepsAvg, trimFloat(avg), fmt.Sprintf("≤ %s", trimFloat(MaxStepsAvg)))
 	r.check("постоянная часть запроса", "main", mr.constant <= MaxConstant, strconv.Itoa(mr.constant)+" токенов", fmt.Sprintf("≤ %d", MaxConstant))
-	noise := abs(m.mustTest - same.mustTest)
-	drop := m.mustTest - norag.mustTest
-	r.check("без базы: must падает больше шума", "norag", drop > noise,
-		fmt.Sprintf("падение %d при шуме %d (must: main %d, norag %d, same %d)", drop, noise, m.mustTest, norag.mustTest, same.mustTest), "падение > шум")
+	// Контроль «без базы»: инструменты файлов остаются (read_file,
+	// repo_search), поэтому точность может и не упасть — агент читает те же
+	// документы напрямую. Что даёт механизм help.rag — проверяемые источники
+	// и дешёвый ход: без него источников нет, а запросов на ход больше, чем
+	// шум между повторами основной дорожки.
+	r.check("без базы: ответов с источниками и цитатами", "norag", norag.cited <= 1,
+		ratio(norag.cited, norag.testN), "≤ 1")
+	avgNorag := float64(runs["norag"].steps) / float64(max(norag.n, 1))
+	avgSame := float64(runs["same"].steps) / float64(max(same.n, 1))
+	stepNoise := math.Abs(avg - avgSame)
+	r.check("без базы: запросов на ход больше шума", "norag", avgNorag-avg > stepNoise,
+		fmt.Sprintf("norag %s, main %s, повтор %s (шум %s)", trimFloat(avgNorag), trimFloat(avg), trimFloat(avgSame), trimFloat(stepNoise)), "рост > шум")
+	r.metric("must (test): падение без базы", "norag", float64(m.mustTest-norag.mustTest), "", fmt.Sprintf("шум %d", abs(m.mustTest-same.mustTest)))
 	for _, name := range sortedKeys(tl) {
 		t, lr := tl[name], runs[name]
 		r.metric("must (test)", name, float64(t.mustTest), "", ratio(t.mustTest, t.testN))

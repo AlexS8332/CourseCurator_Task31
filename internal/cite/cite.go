@@ -263,7 +263,12 @@ var dashSpace = regexp.MustCompile(` ?- ?`)
 // (регистр, ё, кавычки, тире, пробелы) и пробелы вокруг тире схлопнуты.
 // Своя, а не в corpus.Normalize: та же нормализация служит Find, ключам
 // словаря названий и разметке доказательств, и менять их ради цитат незачем.
-func quoteNorm(s string) string { return dashSpace.ReplaceAllString(corpus.Normalize(s), "-") }
+// Экранированная черта markdown-таблиц (`\|`) приравнивается к `|`: в
+// документах курса ячейки с `<номер|slug>` пишутся через `\|`, а модель
+// цитирует их без обратной косой.
+func quoteNorm(s string) string {
+	return dashSpace.ReplaceAllString(corpus.Normalize(strings.ReplaceAll(s, `\|`, "|")), "-")
+}
 
 // maxQuoteGap — самый длинный пропуск «…» в цитате (символов фрагмента
 // между частями): длиннее — это уже склейка разных мест фрагмента, а не
@@ -362,8 +367,11 @@ func negated(gap string) bool {
 // refMark — ссылка «[1]», «[2, 3]» в тексте ответа: не число ответа.
 var refMark = regexp.MustCompile(`\[\d+(?:\s*[,;]\s*\d+)*\]`)
 
-// version — версия («MDD v2.5», «v24»): не число ответа.
-var version = regexp.MustCompile(`(?i)\bv\d+(?:[.,]\d+)*`)
+// version — версия («MDD v2.5», «v24») и любой код, где цифры приклеены к
+// буквам: H.264, e5, MP4, Qwen3.5, sm_61, T06. Это имена, а не
+// количества, и в цитатах их сверять незачем (в «MP4 (H.264)» нет числа
+// 264). Граница слова — не \b: для кириллицы он не работает.
+var version = regexp.MustCompile(`(?i)(?:^|[^\pL\d])[\pL_]+[._-]?\d+(?:[.,]\d+)*`)
 
 // numbersMissing — числа ответа, которых нет в цитатах (разбор — как у
 // Rule: parse). Не в счёт: единица («один из…», «1 вид» — шум, как у
