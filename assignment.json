@@ -3,7 +3,7 @@
   "slug": "course-help",
   "title": "Куратор курса: /help — ассистент, понимающий каталог курса (RAG по документации, MCP git, DeepSeek/Ollama, Go + браузер)",
   "stack": "go",
-  "status": "planned",
+  "status": "done",
   "created": "2026-10-16",
   "updated": "2026-10-16",
   "repo": "",
